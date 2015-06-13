@@ -1,5 +1,6 @@
 module Main where
 
+import System.Environment          (getArgs)
 import Data.List                   (findIndex)
 import Data.Digits                 (digits, unDigits)
 import Control.Parallel.Strategies (parListChunk, using, rseq)
@@ -16,7 +17,8 @@ check n = and [valid 6 b m | b <- [3,4,5]]
     m = (convertBase 10 2) (digits 10 n)
 
 main :: IO ()
-main = loop 1
+main = do [arg] <- getArgs
+          loop (read arg)
   where
     loop :: Integer ->  IO ()
     loop n = do let s = n * 1000000
