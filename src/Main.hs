@@ -11,7 +11,7 @@ import Control.Concurrent          (forkIO)
 import Control.Concurrent.Async    (race_)
 import Control.Parallel.Strategies (parList, parListChunk, using, rseq)
 
-type Filter = [Integer]
+import Filters
 
 createFilter :: Int -> Filter
 createFilter n = (filter (\z -> (pr 3 z) && (pr 4 z) && (pr 5 z) && (pr 6 z)) zs) `using` parList rseq
@@ -51,7 +51,7 @@ main = do hSetBuffering stdin NoBuffering
                             else putStrLn "Exit at any time by pressing \"Q\"" >> loop
 
     calc :: Integer -> IO ()
-    calc n = do let s = take 1000000 (usefulNumbers (createFilter 3) n)
+    calc n = do let s = take 1000000 (usefulNumbers filter4 n)
                 let bs = [check m | m <- s] `using` parListChunk 10000 rseq
                 if or bs then print $ "Found!"
                          else do let ls = last s
