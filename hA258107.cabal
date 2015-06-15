@@ -17,6 +17,10 @@ extra-source-files:  README.md
 cabal-version:       >=1.10
 
 executable hA258107
+  ghc-options:
+      -O2
+      -threaded
+      -with-rtsopts=-N
   main-is:             Main.hs
   -- other-modules:       
   -- other-extensions:    
