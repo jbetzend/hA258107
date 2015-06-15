@@ -3,7 +3,7 @@ module Main where
 import System.IO
 import System.Environment          (getArgs)
 
-import Data.List                   (findIndex, foldl')
+import Data.List                   (findIndex, foldl', nub)
 import Data.Digits                 (digits, unDigits)
 
 import Control.Monad               (unless)
@@ -17,14 +17,20 @@ type Filter = [Integer]
 basicFilter :: Filter
 basicFilter = [0,1,25,36,60]
 
-createFilter :: Int -> Bases -> Filter
-createFilter n bs = undefined
+createFilter :: Int -> Filter
+createFilter n = filter (\z -> (pr 3 z) && (pr 4 z) && (pr 5 z) && (pr 6 z)) zs
   where
     zs   = [0..lcma]
-    lcma = manyLCM bs 
+    lcma = manyLCM $ nub [k^x | k <- [3,4,5,6], x <- [1..n]]
 
-manyLCM :: (Foldable t, Integral a) => t a -> a
-manyLCM = foldl' lcm (fromInteger 1)
+    pr :: Int -> Integer -> Bool 
+    pr i = (all (\d -> d <= 1)) . (take n) . reverse . (convertBase 10 (fromIntegral i)) . (digits 10)
+
+    manyLCM :: (Foldable t, Integral a) => t a -> a
+    manyLCM = foldl' lcm (fromInteger 1)
+
+usefulNumbers :: Filter -> Integer -> [Integer]
+usefulNumbers fs n = undefined -- (map (($) . (\k -> (:) (n+k))) fs) : (usefulNumbers fs (last fs))
 
 nonSillyNumbers :: Integer -> [Integer]
 nonSillyNumbers n = n:(n+1):(n+25):(n+36):(nonSillyNumbers (n+60))
@@ -33,7 +39,7 @@ convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
 
 valid :: Integral a => a -> a -> [a] -> Bool
-valid from to = (all (\d -> (d <= 1))) . (convertBase from to)
+valid from to = (all (\d -> d <= 1)) . (convertBase from to)
 
 -- Base 2 always valid.
 check :: Integer -> Bool
