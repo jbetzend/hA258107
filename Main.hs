@@ -3,7 +3,7 @@ module Main where
 import System.IO
 import System.Environment          (getArgs)
 
-import Data.List                   (findIndex)
+import Data.List                   (findIndex, foldl')
 import Data.Digits                 (digits, unDigits)
 
 import Control.Monad               (unless)
@@ -11,13 +11,20 @@ import Control.Concurrent          (forkIO)
 import Control.Concurrent.Async    (race_)
 import Control.Parallel.Strategies (parListChunk, using, rseq)
 
+type Bases  = [Integer]
 type Filter = [Integer]
 
 basicFilter :: Filter
 basicFilter = [0,1,25,36,60]
 
-usefulNumbers :: Integer -> Filter -> [Integer]
-usefulNumbers n (fs:f:[]) = (foldr ((:) . (n+)) [] fs) : (usefulNumbers (n + f) fs)
+createFilter :: Int -> Bases -> Filter
+createFilter n bs = undefined
+  where
+    zs   = [0..lcma]
+    lcma = manyLCM bs 
+
+manyLCM :: (Foldable t, Integral a) => t a -> a
+manyLCM = foldl' lcm (fromInteger 1)
 
 nonSillyNumbers :: Integer -> [Integer]
 nonSillyNumbers n = n:(n+1):(n+25):(n+36):(nonSillyNumbers (n+60))
