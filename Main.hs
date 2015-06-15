@@ -13,6 +13,9 @@ import Control.Parallel.Strategies (parList, parListChunk, using, rseq)
 
 type Filter = [Integer]
 
+filter3 :: Filter
+filter3 = [0,1,900,901,3025,7380,7381,17280,17281,29376,30276,32005,32400,32401,36756,46656,47125,57025,61380,61381,61776,63505,64405,76500,76501,86400,86401,90756,92880,92881,93780,93781,101125,105876,115776,117505,118405,122256,123156,130500,130501,132625,133525,146880,146881,147780,147781,149905,159876,162000,162001,162900,162901,176256,177156,179280,179281,186625,187525,191376,192276,194005,203905,208656,216000]
+
 createFilter :: Int -> Filter
 createFilter n = (filter (\z -> (pr 3 z) && (pr 4 z) && (pr 5 z) && (pr 6 z)) zs) `using` parList rseq
   where
@@ -26,7 +29,7 @@ createFilter n = (filter (\z -> (pr 3 z) && (pr 4 z) && (pr 5 z) && (pr 6 z)) zs
     manyLCM = foldl' lcm (fromInteger 1)
 
 usefulNumbers :: Filter -> Integer -> [Integer]
-usefulNumbers fs n = (foldr ((:) . (+n)) (usefulNumbers fs (last fs)) (init fs))
+usefulNumbers fs n = (foldr ((:) . (+n)) (usefulNumbers fs (n + (last fs))) (init fs))
 
 convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
@@ -50,10 +53,10 @@ main = do hSetBuffering stdin NoBuffering
               if (c == 'q') then putStrLn " Exiting."
                             else putStrLn "Exit at any time by pressing \"Q\"" >> loop
 
-calc :: Integer -> IO ()
-calc n = do let s = take 1000000 (usefulNumbers (createFilter 3) 0)
-            let bs = [check m | m <- s] `using` parListChunk 10000 rseq
-            if or bs then print $ "Found!"
-                     else do let ls = last s
-                             putStrLn $ "No match for n <= " ++ show ls
-                             calc ls
+    calc :: Integer -> IO ()
+    calc n = do let s = take 1000000 (usefulNumbers filter3 n)
+                let bs = [check m | m <- s] `using` parListChunk 10000 rseq
+                if or bs then print $ "Found!"
+                         else do let ls = last s
+                                 putStrLn $ "No match for n <= " ++ show ls
+                                 calc ls
