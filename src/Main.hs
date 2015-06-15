@@ -51,7 +51,7 @@ main = do hSetBuffering stdin NoBuffering
                             else putStrLn "Exit at any time by pressing \"Q\"" >> loop
 
     calc :: Integer -> IO ()
-    calc n = do let s = take 1000000 (usefulNumbers filter3 n)
+    calc n = do let s = take 1000000 (usefulNumbers (createFilter 3) n)
                 let bs = [check m | m <- s] `using` parListChunk 10000 rseq
                 if or bs then print $ "Found!"
                          else do let ls = last s
