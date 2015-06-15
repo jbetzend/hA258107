@@ -9,31 +9,24 @@ import Data.Digits                 (digits, unDigits)
 import Control.Monad               (unless)
 import Control.Concurrent          (forkIO)
 import Control.Concurrent.Async    (race_)
-import Control.Parallel.Strategies (parListChunk, using, rseq)
+import Control.Parallel.Strategies (parList, parListChunk, using, rseq)
 
-type Bases  = [Integer]
 type Filter = [Integer]
 
-basicFilter :: Filter
-basicFilter = [0,1,25,36,60]
-
 createFilter :: Int -> Filter
-createFilter n = filter (\z -> (pr 3 z) && (pr 4 z) && (pr 5 z) && (pr 6 z)) zs
+createFilter n = (filter (\z -> (pr 3 z) && (pr 4 z) && (pr 5 z) && (pr 6 z)) zs) `using` parList rseq
   where
     zs   = [0..lcma]
     lcma = manyLCM $ nub [k^x | k <- [3,4,5,6], x <- [1..n]]
 
-    pr :: Int -> Integer -> Bool 
+    pr :: Int -> Integer -> Bool
     pr i = (all (\d -> d <= 1)) . (take n) . reverse . (convertBase 10 (fromIntegral i)) . (digits 10)
 
     manyLCM :: (Foldable t, Integral a) => t a -> a
     manyLCM = foldl' lcm (fromInteger 1)
 
 usefulNumbers :: Filter -> Integer -> [Integer]
-usefulNumbers fs n = undefined -- (map (($) . (\k -> (:) (n+k))) fs) : (usefulNumbers fs (last fs))
-
-nonSillyNumbers :: Integer -> [Integer]
-nonSillyNumbers n = n:(n+1):(n+25):(n+36):(nonSillyNumbers (n+60))
+usefulNumbers fs n = (foldr ((:) . (+n)) (usefulNumbers fs (last fs)) (init fs))
 
 convertBase :: Integral a => a -> a -> [a] -> [a]
 convertBase from to = digits to . unDigits from
@@ -58,7 +51,7 @@ main = do hSetBuffering stdin NoBuffering
                             else putStrLn "Exit at any time by pressing \"Q\"" >> loop
 
 calc :: Integer -> IO ()
-calc n = do let s = take 1000000 (nonSillyNumbers n)
+calc n = do let s = take 1000000 (usefulNumbers (createFilter 3) 0)
             let bs = [check m | m <- s] `using` parListChunk 10000 rseq
             if or bs then print $ "Found!"
                      else do let ls = last s
