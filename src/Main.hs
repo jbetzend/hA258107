@@ -14,13 +14,17 @@ import Control.Parallel.Strategies (parList, parListChunk, using, rseq)
 import Filters
 
 createFilter :: Int -> Filter
-createFilter n = (filter (\z -> (pr 3 z) && (pr 4 z) && (pr 5 z) && (pr 6 z)) zs) `using` parList rseq
+createFilter n = (filter pred zs) `using` parList rseq
   where
-    zs   = [0..lcma]
+    zs :: [Integer]
+    zs = (takeWhile (< lcma) (usefulNumbers filter3 0)) ++ [lcma]
+
+    lcma :: Integer
     lcma = manyLCM $ nub [k^x | k <- [3,4,5,6], x <- [1..n]]
 
-    pr :: Int -> Integer -> Bool
-    pr i = (all (\d -> d <= 1)) . (take n) . reverse . (convertBase 10 (fromIntegral i)) . (digits 10)
+    pred :: Integer -> Bool
+    pred z = let dz = digits 10 z
+              in and $ map ((all (\d -> d <= 1)) . (take n) . reverse) [convertBase 10 i dz | i <- [3,4,5,6]]
 
     manyLCM :: (Foldable t, Integral a) => t a -> a
     manyLCM = foldl' lcm (fromInteger 1)
@@ -51,7 +55,7 @@ main = do hSetBuffering stdin NoBuffering
                             else putStrLn "Exit at any time by pressing \"Q\"" >> loop
 
     calc :: Integer -> IO ()
-    calc n = do let s = take 1000000 (usefulNumbers filter4 n)
+    calc n = do let s = take 1000000 (usefulNumbers filter5 n)
                 let bs = [check m | m <- s] `using` parListChunk 10000 rseq
                 if or bs then print $ "Found!"
                          else do let ls = last s
