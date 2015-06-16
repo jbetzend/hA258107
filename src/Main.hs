@@ -47,17 +47,23 @@ check n = let m = digits 10 n
 -- Assumes argument is a multiple of 60 (for non-silly-number-generation)
 main :: IO ()
 main = do hSetBuffering stdin NoBuffering
-          args <- getArgs
-          case args of
-               [arg] -> do filvar <- newMVar filter5
+          count <- readFile "count.txt"
+          args  <- readFile "prev_result.txt"
+          case lines args of
+               [arg] -> do filvar <- newMVar maxFilter
                            forkIO $ calc (read arg) filvar
-                           loop 5 filvar
-               _     -> error "Wrong number of arguments!"
+                           loop (read count) filvar
+               _     -> error "Wrong result format!"
   where
     loop :: Int -> MVar Filter -> IO ()
     loop m mvarf = do cur <- readMVar mvarf
                       let nf = (createFilter m cur) `using` rdeepseq
-                      putStrLn $ "## New filter! Length: " ++ show (length nf)
+                      let o = show (m+1)
+                      let newModule = "module StaticFilters.Filter" ++ o ++ " where\n\nfilter" ++ o ++ " :: [Integer]\nfilter" ++ o ++ " = " ++ show nf
+                      let filep = "./src/StaticFilters/Filter" ++ o ++ ".hs"
+                      writeFile filep newModule
+                      writeFile "./count.txt" o
+                      putStrLn $ "## New filter! Written to " ++ filep
                       swapMVar mvarf nf
                       loop (m+1) mvarf
 
@@ -65,7 +71,10 @@ main = do hSetBuffering stdin NoBuffering
     calc n f = do fil <- readMVar f
                   let s = take 1000000 (usefulNumbers fil n)
                   let bs = [check m | m <- s] `using` parListChunk 10000 rseq
-                  if or bs then print $ "Found result!"
+                  if or bs then do let final = head $ filter check s
+                                   writeFile "final_result.txt" (show final)
+                                   putStrLn "Found result! Written to final_result.txt"
                            else do let ls = last s
-                                   putStrLn $ "No match for n <= " ++ show ls
+                                   writeFile "./prev_result.txt" (show ls)
+                                   putStrLn $ "No match in this block! n ~ 10e" ++ ((show . length . show) ls) ++ " (written)"
                                    calc (n+ls) f
