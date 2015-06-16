@@ -8,16 +8,17 @@ import Data.Digits                 (digits, unDigits)
 
 import Control.Monad               (unless)
 import Control.Concurrent          (forkIO)
-import Control.Concurrent.Async    (race_)
-import Control.Parallel.Strategies (parList, parListChunk, using, rseq)
+import Control.Concurrent.MVar
+import Control.Concurrent.Async    (race)
+import Control.Parallel.Strategies (parList, parListChunk, using, rseq, rdeepseq)
 
 import Filters
 
-createFilter :: Int -> Filter
-createFilter n = (filter pred zs) `using` parList rseq
+createFilter :: Int -> Filter -> Filter
+createFilter n f = (filter pred zs) --`using` parList rseq
   where
     zs :: [Integer]
-    zs = (takeWhile (< lcma) (usefulNumbers filter3 0)) ++ [lcma]
+    zs = (takeWhile (< lcma) (usefulNumbers f 0)) ++ [lcma]
 
     lcma :: Integer
     lcma = manyLCM $ nub [k^x | k <- [3,4,5,6], x <- [1..n]]
@@ -46,18 +47,25 @@ check n = let m = digits 10 n
 -- Assumes argument is a multiple of 60 (for non-silly-number-generation)
 main :: IO ()
 main = do hSetBuffering stdin NoBuffering
-          [arg] <- getArgs
-          race_ loop (calc (read arg))
+          args <- getArgs
+          case args of
+               [arg] -> do filvar <- newMVar filter5
+                           forkIO $ calc (read arg) filvar
+                           loop 5 filvar
+               _     -> error "Wrong number of arguments!"
   where
-    loop :: IO ()
-    loop = do c <- getChar
-              if (c == 'q') then putStrLn " Exiting."
-                            else putStrLn "Exit at any time by pressing \"Q\"" >> loop
+    loop :: Int -> MVar Filter -> IO ()
+    loop m mvarf = do cur <- readMVar mvarf
+                      let nf = (createFilter m cur) `using` rdeepseq
+                      putStrLn $ "## New filter! Length: " ++ show (length nf)
+                      swapMVar mvarf nf
+                      loop (m+1) mvarf
 
-    calc :: Integer -> IO ()
-    calc n = do let s = take 1000000 (usefulNumbers filter5 n)
-                let bs = [check m | m <- s] `using` parListChunk 10000 rseq
-                if or bs then print $ "Found!"
-                         else do let ls = last s
-                                 putStrLn $ "No match for n <= " ++ show ls
-                                 calc ls
+    calc :: Integer -> MVar Filter -> IO ()
+    calc n f = do fil <- readMVar f
+                  let s = take 1000000 (usefulNumbers fil n)
+                  let bs = [check m | m <- s] `using` parListChunk 10000 rseq
+                  if or bs then print $ "Found result!"
+                           else do let ls = last s
+                                   putStrLn $ "No match for n <= " ++ show ls
+                                   calc (n+ls) f
